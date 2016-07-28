@@ -20,7 +20,7 @@ python remove-recipients.py --user <user>  --remove <recipient name>
 ###### Clear history 
 
 ```python
- python remove-recipients.py --user <user>  --remove-all
+python remove-recipients.py --user <user>  --remove-all
 ```
     
 #### Example
