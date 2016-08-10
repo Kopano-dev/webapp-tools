@@ -1,5 +1,5 @@
-# !/usr/bin/env python
-# encoding: utf-8
+#!/usr/bin/env python
+#encoding: utf-8
 
 from MAPI import *
 from MAPI.Util import *
