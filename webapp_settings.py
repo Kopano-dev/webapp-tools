@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # encoding: utf-8
 
 from MAPI import *
@@ -41,5 +41,7 @@ def main():
 
         print data
         user.store.prop(PR_EC_WEBACCESS_SETTINGS_JSON).set_value(json.dumps(data))
+        
+        
 if __name__ == "__main__":
     main()
