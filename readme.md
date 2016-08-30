@@ -1,6 +1,6 @@
-remove_recipients.py
+manage_recipients.py
 ====================
-Remove recipients in webapp
+Manage recipients in webapp
 
 
 #### Usage:
