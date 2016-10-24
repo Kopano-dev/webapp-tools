@@ -19,8 +19,8 @@ PR_EC_WEBACCESS_SETTINGS_JSON = PROP_TAG(PT_STRING8, PR_EC_BASE + 0x72)
 
 
 def encode(value):
-    output = subprocess.check_output(["php", "deencode.php", "encode", value])
-    return output.strip()
+    proc = subprocess.Popen(["php", "deencode.php", "encode", value], stdout=subprocess.PIPE)
+    return proc.communicate()[0]
 
 
 def opt_args():
@@ -117,7 +117,7 @@ def files(options):
                     encode(configfile['setting']['server_address']), configfile['setting']['server_ssl'],
                     encode('d4cacda458a2a26c301f2b7d75ada530'), configfile['setting']['use_zarafa_credentials'],
                     encode(username), encode(configfile['setting']['default_password']),
-                    encode('443'), configfile['setting']['name'], id, configfile['setting']['type'])
+                    encode(configfile['setting']['server_port']), configfile['setting']['name'], id, configfile['setting']['type'])
         num += 1
 
     filesjson += '''
