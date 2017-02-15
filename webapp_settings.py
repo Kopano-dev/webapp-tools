@@ -4,12 +4,14 @@
 from MAPI import *
 from MAPI.Util import *
 import sys
-import kopano
-
 try:
-        import json
+    import kopano
+except ImportError
+    import zarafa as kopano
+try:
+    import json
 except ImportError:
-        import simplejson as json
+    import simplejson as json
 
 def opt_args():
     parser = kopano.parser('skpcfm')
