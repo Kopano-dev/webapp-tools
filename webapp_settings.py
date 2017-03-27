@@ -6,7 +6,7 @@ from MAPI.Util import *
 import sys
 try:
     import kopano
-except ImportError
+except ImportError:
     import zarafa as kopano
 try:
     import json
