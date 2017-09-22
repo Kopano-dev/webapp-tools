@@ -104,6 +104,7 @@ def files(options):
                     "password": "%s",
                     "server_port": "%s"
                 },
+		"cannot_change": "false",
                 "name": "%s",
                 "status_description": "Account is ready to use.",
                 "id": "%s",
