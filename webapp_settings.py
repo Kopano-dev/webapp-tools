@@ -18,6 +18,7 @@ def opt_args():
     parser.add_option("--user", dest="user", action="store", help="Run script for user")
     parser.add_option("--backup", dest="backup", action="store_true", help="Backup webapp setting ")
     parser.add_option("--restore", dest="restore", action="store_true", help="Restore webapp settings")
+    parser.add_option("--remove", dest="remove", action="store_true", help="Remove webapp settings")
 
     return parser.parse_args()
 
@@ -25,7 +26,7 @@ def opt_args():
 def main():
     options, args = opt_args()
 
-    if not options.user or (not options.backup and not options.restore):
+    if not options.user or (not options.backup and not options.restore and not options.remove):
         print 'Please use:\n %s --user <username> (--backup or --restore)  ' % (sys.argv[0])
         sys.exit()
 
@@ -43,7 +44,9 @@ def main():
 
         print data
         user.store.prop(PR_EC_WEBACCESS_SETTINGS_JSON).set_value(json.dumps(data))
-        
-        
+
+    if options.remove:
+        user.store.delete(user.store.prop('PR_EC_WEBACCESS_SETTINGS_JSON'))
+
 if __name__ == "__main__":
     main()
