@@ -43,7 +43,7 @@ def main():
             data = json.load(data_file)
 
         print data
-        user.store.prop(PR_EC_WEBACCESS_SETTINGS_JSON).set_value(json.dumps(data))
+        user.store.create_prop(PR_EC_WEBACCESS_SETTINGS_JSON, json.dumps(data))
 
     if options.remove:
         user.store.delete(user.store.prop('PR_EC_WEBACCESS_SETTINGS_JSON'))
