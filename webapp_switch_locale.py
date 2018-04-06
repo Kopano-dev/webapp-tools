@@ -28,7 +28,7 @@ def main():
     if options.locale:
         print 'Setting locale to: %s' % options.locale
         settings['settings']['zarafa']['v1']['main']['language'] = options.locale
-        user.store.prop(PR_EC_WEBACCESS_SETTINGS_JSON).set_value(json.dumps(settings))
+        user.store.create_prop(PR_EC_WEBACCESS_SETTINGS_JSON, json.dumps(settings))
 
 
 if __name__ == "__main__":
