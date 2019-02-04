@@ -122,9 +122,7 @@ def main():
             webappsettings['settings']['zarafa']['v1']['plugins']['files'] = {}
         if not webappsettings['settings']['zarafa']['v1']['plugins']['files'].get('accounts'):
             webappsettings['settings']['zarafa']['v1']['plugins']['files']['accounts'] = {}
-        bla = files(options)
-        print(bla)
-        webappsettings['settings']['zarafa']['v1']['plugins']['files']['accounts'].update(json.loads(bla))
+        webappsettings['settings']['zarafa']['v1']['plugins']['files']['accounts'].update(json.loads(files(options)))
 
     write_settings(json.dumps(webappsettings), options)
 
