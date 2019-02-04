@@ -5,17 +5,11 @@ import uuid
 
 from MAPI.Util import *
 import kopano
-
-
-
 # Try simplejson if json is not available
 try:
     import json
 except ImportError:
     import simplejson as json
-
-# Define where to read and write our WebApp config from / to
-PR_EC_WEBACCESS_SETTINGS_JSON = PROP_TAG(PT_STRING8, PR_EC_BASE + 0x72)
 
 
 def encode(value):
@@ -24,9 +18,10 @@ def encode(value):
 
 
 def opt_args():
-    parser = kopano.parser('skpcfm')
+    parser = kopano.parser('skpcfmUP')
     parser.add_option("--user", dest="user", action="store", help="username")
     parser.add_option("--file", dest="file", default=[], action="store", help="config file(s) separate by ',' ")
+    parser.add_option("--overwrite", dest="overwrite", action="store_true", help="overwrite files settings")
     parser.add_option("--default", dest="default", action="store_true",
                       help="use default user and password in the configfile")
 
@@ -34,51 +29,35 @@ def opt_args():
 
 
 def read_settings(options):
-    data = None
 
     try:
         user = kopano.Server(options).user(options.user)
-
-        st = user.store.mapiobj
-
-    except MAPIErrorNotFound as e:
-        print 'User \'%s\' has no user store (%s)' % (options.user, e)
-        return
-
     except MAPIErrorLogonFailed as e:
-        print 'User \'%s\' not found (%s)' % (options.user, e)
-        return
+        print('User \'{}\' not found ({})'.format(options.user, e))
+        sys.exit(1)
+
+    if not user.store:
+        print('User \'{}\' has no user store ({})'.format(options.user, e))
+        sys.exit(1)
 
     try:
-        settings = st.OpenProperty(PR_EC_WEBACCESS_SETTINGS_JSON, IID_IStream, 0, 0)
-        data = settings.Read(33554432)
-    except Exception as e:
-        print 'No WebApp settings found.'
-        data = '{"settings": {"zarafa": {"v1": {"contexts": {"mail": {}}}}}}'
-
-    return data
+        mapisettings = user.store.prop(PR_EC_WEBACCESS_SETTINGS_JSON).value
+        return mapisettings
+    except Exception:
+        print('{}: Has no or no valid WebApp settings creating empty config tree'.format(user.name))
+        return '{"settings": {"zarafa": {"v1": {"contexts": {"mail": {}}}}}}'
 
 
 def write_settings(data, options):
     user = kopano.Server(options).user(options.user)
-    st = user.store.mapiobj
-
-    settings = st.OpenProperty(PR_EC_WEBACCESS_SETTINGS_JSON, IID_IStream, 0, MAPI_MODIFY | MAPI_CREATE)
-    settings.SetSize(0)
-    settings.Seek(0, STREAM_SEEK_END)
-
-    writesettings = settings.Write(data)
-
-    if writesettings:
-        print 'Writing settings for user \'%s\'' % user.fullname
-        settings.Commit(0)
-    else:
-        print 'Writing settings for user \'%s\' failed.' % user.fullname
+    user.store.create_prop(PR_EC_WEBACCESS_SETTINGS_JSON, data.encode('utf-8'))
+    print('Writing settings for user \'{}\''.format(user.fullname))
 
 
 def files(options):
-    filesjson = '''{
-        "accounts": {'''
+    filesjson = '{'
+    if options.overwrite:
+        filesjson = '{"accounts": {'
     num = 0
     files = options.file.split(',')
     for file in files:
@@ -120,11 +99,10 @@ def files(options):
                     encode(username), encode(configfile['setting']['default_password']),
                     encode(configfile['setting']['server_port']), configfile['setting']['name'], id, configfile['setting']['type'])
         num += 1
-
-    filesjson += '''
-        }
-    }
-    '''
+    if options.overwrite:
+        filesjson += '}}'
+    else:
+        filesjson += '}'
     return filesjson
 
 
@@ -134,15 +112,24 @@ def main():
     data = read_settings(options)
     webappsettings = json.loads(data)
 
-    try:
-        if webappsettings['settings']['zarafa']['v1']['plugins']:
-            pass
-    except:
-        webappsettings['settings']['zarafa']['v1']['plugins'] = dict({})
+    if not webappsettings['settings']['zarafa']['v1'].get('plugins'):
+        webappsettings['settings']['zarafa']['v1']['plugins'] = {}
 
-    webappsettings['settings']['zarafa']['v1']['plugins']['files'] = json.loads(files(options))
+    if options.overwrite:
+        webappsettings['settings']['zarafa']['v1']['plugins']['files'] = json.loads(files(options))
+    else:
+        if not webappsettings['settings']['zarafa']['v1']['plugins'].get('files'):
+            webappsettings['settings']['zarafa']['v1']['plugins']['files'] = {}
+        if not webappsettings['settings']['zarafa']['v1']['plugins']['files'].get('accounts'):
+            webappsettings['settings']['zarafa']['v1']['plugins']['files']['accounts'] = {}
+        bla = files(options)
+        print(bla)
+        webappsettings['settings']['zarafa']['v1']['plugins']['files']['accounts'].update(json.loads(bla))
+
     write_settings(json.dumps(webappsettings), options)
 
 
 if __name__ == '__main__':
     main()
+
+
