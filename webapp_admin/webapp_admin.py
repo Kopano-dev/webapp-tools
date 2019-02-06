@@ -357,7 +357,6 @@ Inject webapp settings into the users store
 :param user: The user
 :param data: The webapp setting
 :param removed: Remove old setting and write new setting
-:return: The new settings
 """
 def advanced_inject(user, data, removed=None):
     settings = read_settings(user)
@@ -370,11 +369,9 @@ def advanced_inject(user, data, removed=None):
     else:
         dot[split_data[0].rstrip()] = value
     new_data = dot.to_dict()
-    write_settings(user, json.dumps(new_settings))
+    write_settings(user, json.dumps(new_data))
 
-    return new_settings
-
-
+    
 """
 Main function run with arguments
 """
