@@ -72,6 +72,7 @@ def opt_args(print_help=None):
     group.add_option("--theme", dest="theme", action="store", help="Change theme (e.g. dark)")
     group.add_option("--free-busy", dest="freebusy", action="store", help="Change free/busy time span in months")
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
+    group.add_option("--htmleditor", dest="htmleditor", action="store", help="Change the HTML editor (e.g. full_tinymce)")
     parser.add_option_group(group)
 
     # Advanced option group
@@ -352,24 +353,44 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
 
 
 """
+Custom function to merge two dictionaries.
+Previously we used the internal dotty function for this,
+but this function caused undesired behavior
+
+:param dict1: The first dictionary
+:param dict2: The second dictionary
+"""
+def mergedicts(dict1, dict2):
+    for k in set(dict1.keys()).union(dict2.keys()):
+        if k in dict1 and k in dict2:
+            if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
+                yield (k, dict(mergedicts(dict1[k], dict2[k])))
+            else:
+                yield (k, dict2[k])
+        elif k in dict1:
+            yield (k, dict1[k])
+        else:
+            yield (k, dict2[k])
+
+
+"""
 Inject webapp settings into the users store
 
 :param user: The user
 :param data: The webapp setting
-:param removed: Remove old setting and write new setting
 """
-def advanced_inject(user, data, removed=None):
+def advanced_inject(user, data):
     settings = read_settings(user)
     split_data = data.split('=')
 
     value = split_data[1].lstrip().rstrip()
-    dot = dotty(settings)
-    if removed:
-        del dot[split_data[0].rstrip()]
-    else:
-        dot[split_data[0].rstrip()] = value
+    dot = dotty()
+    dot[split_data[0].rstrip()] = value
+
     new_data = dot.to_dict()
-    write_settings(user, json.dumps(new_data))
+    new_settings = dict(mergedicts(settings, new_data))
+
+    write_settings(user, json.dumps(new_settings))
 
     
 """
@@ -427,9 +448,23 @@ def main():
 
         # Icon set
         if options.icons:
+            accepted_icons = {'Breeze', 'Classic'}
+            if not options.icons in accepted_icons:
+                print('Valid syntax: Breeze or Classic')
+                sys.exit(1)
             setting = 'settings.zarafa.v1.main.active_iconset = {}'.format(options.icons)
             advanced_inject(user, setting)
             print('icon set changed to {}'.format(options.icons))
+
+        # Editor
+        if options.htmleditor:
+            accepted_editors = {'htmleditor-minimaltiny', 'full_tinymce'}
+            if not options.htmleditor in accepted_editors:
+                print('Valid syntax: htmleditor-minimaltiny or full_tinymce')
+                sys.exit(1)
+            setting = 'settings.zarafa.v1.contexts.mail.html_editor = {}'.format(options.htmleditor)
+            advanced_inject(user, setting)
+            print('Editor changed to {}'.format(options.htmleditor))
 
         # Always at last!!!
         if options.reset:

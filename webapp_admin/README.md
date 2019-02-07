@@ -12,6 +12,9 @@ Reset WebApp settings
 Change free/busy to 36 months
 > python3 webapp_admin -u john --free-busy=36
 
+If you want to make a change for all users don't pass the user parameter. Example:
+> python3 webapp_admin --icons Breeze
+
 # Dependencies
 
 - python3
