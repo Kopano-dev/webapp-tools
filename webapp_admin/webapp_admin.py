@@ -45,7 +45,6 @@ def opt_args(print_help=None):
     group.add_option("--location", dest="location", action="store", help="Change location where scripts saves the files")
     group.add_option("--file", dest="file", action="store", help="Use specific file")
     group.add_option("--backup", dest="backup", action="store_true", help="Backup Webapp settings")
-    group.add_option("--change-locale", dest="change_locale", action="store", help="Set new locale (e.g. en_GB or nl_NL)")
     group.add_option("--restore", dest="restore", action="store_true", help="Restore Webapp settings")
     group.add_option("--reset", dest="reset", action="store_true", help="Reset WebApp settings")
     parser.add_option_group(group)
@@ -69,6 +68,7 @@ def opt_args(print_help=None):
 
     # WebApp setting option group
     group = OptionGroup(parser, "webapp-settings", "")
+    group.add_option("--language", dest="language", action="store", help="Set new language (e.g. en_GB or nl_NL)")
     group.add_option("--theme", dest="theme", action="store", help="Change theme (e.g. dark)")
     group.add_option("--free-busy", dest="freebusy", action="store", help="Change free/busy time span in months")
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
@@ -168,9 +168,9 @@ def restore(user, filename=None):
 Change the language
 
 :param user: The user
-:param locale: The language that should be used. Format e.g. "en_GB"
+:param language: The language that should be used. Format e.g. "en_GB"
 """
-def change_locale(user, locale):
+def language(user, language):
     settings = read_settings(user)
     if not settings['settings']['zarafa']['v1'].get('main'):
         settings['settings']['zarafa']['v1']['main'] = {}
@@ -409,8 +409,8 @@ def main():
             restore(user, options.file)
 
         # Language
-        if options.change_locale:
-            change_locale(user, options.change_locale)
+        if options.language:
+            language(user, options.language)
 
         # S/MIME import/export
         if options.export_smime:
