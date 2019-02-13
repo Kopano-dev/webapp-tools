@@ -2,7 +2,6 @@
 import subprocess
 from configobj import ConfigObj
 import uuid
-
 from MAPI.Util import *
 import kopano
 # Try simplejson if json is not available
@@ -129,5 +128,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
+    
