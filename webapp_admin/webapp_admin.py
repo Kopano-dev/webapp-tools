@@ -42,6 +42,7 @@ def opt_args(print_help=None):
 
     # Common option group
     group = OptionGroup(parser, "Common", "")
+    group.add_option("--all-users", dest="all_users", action="store_true", help="Run for all users")
     group.add_option("--location", dest="location", action="store", help="Change location where scripts saves the files")
     group.add_option("--file", dest="file", action="store", help="Use specific file")
     group.add_option("--backup", dest="backup", action="store_true", help="Backup Webapp settings")
@@ -401,6 +402,13 @@ def main():
         opt_args(True)
     options, args = opt_args()
 
+    # Always first!
+    # If the script should execute for all users
+    # The admin should pass the '--all-users' parameter
+    if not options.users and not options.all_users:
+        print('There are no users specified. Use "--all-users" to run for all users')
+        sys.exit(1)
+
     for user in kopano.Server(options).users(options.users):
         # Backup and restore
         if options.backup:
@@ -432,7 +440,7 @@ def main():
         if options.theme:
             setting = 'settings.zarafa.v1.main.active_theme = {}'.format(options.theme)
             advanced_inject(user, setting)
-            print('Theme changed to {}'.format(options.icons))
+            print('Theme changed to {}'.format(options.theme))
 
         # Free busy publishing
         if options.freebusy:
