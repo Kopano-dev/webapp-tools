@@ -276,15 +276,15 @@ def export_smime(user, location=None, public=None):
         return
 
     for cert in certificates:
-        if public and cert.prop(PR_MESSAGE_CLASS).value == 'WebApp.Security.Public':
+        if public and cert.prop(PR_MESSAGE_CLASS_w).value == 'WebApp.Security.Public':
             extension = 'pub'
-            body = cert.body.text
+            body = cert.text
         else:
             extension = 'pfx'
-            body = base64.b64decode(cert.body.text)
+            body = base64.b64decode(cert.text)
 
-            print('found {} certificate {} (serial: {})'.format(cert.prop(PR_MESSAGE_CLASS).value, cert.subject, cert.prop(PR_SENDER_NAME).value))
-            with open("%s/%s-%s.%s" % (backup_location, cert.subject, cert.prop(PR_SENDER_NAME).value, extension), "w") as text_file:
+            print('found {} certificate {} (serial: {})'.format(cert.prop(PR_MESSAGE_CLASS_W).value, cert.subject, cert.prop(PR_SENDER_NAME_W).value))
+            with open("%s/%s-%s.%s" % (backup_location, cert.subject, cert.prop(PR_SENDER_NAME_W).value, extension), "wb") as text_file:
                 text_file.write(body)
 
 
@@ -304,7 +304,7 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
         passwd = ''
 
     assoc = user.store.root.associated
-    with open(cert_file) as f:
+    with open(cert_file, 'rb') as f:
         cert = f.read()
     if not public:
         messageclass = 'WebApp.Security.Private'
@@ -314,13 +314,13 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
             print(e)
             sys.exit(1)
         except Exception as e:
-            print(e.message)
+            print(e)
             sys.exit(1)
-
+	
         certificate = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, p12.get_certificate())
         cert_data = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
-        date_before = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notBefore(), "%Y%m%d%H%M%SZ" ).timetuple()))
-        date_after = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notAfter(), "%Y%m%d%H%M%SZ" ).timetuple()))
+        date_before = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notBefore().decode('utf-8'), "%Y%m%d%H%M%SZ" ).timetuple()))
+        date_after = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notAfter().decode('utf-8'), "%Y%m%d%H%M%SZ" ).timetuple()))
 
         issued_by = ""
         dict_issued_by = dict(cert_data.get_issuer().get_components())
@@ -330,23 +330,24 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
         issued_to = ""
         dict_issued_to = dict(cert_data.get_subject().get_components())
         for key in dict_issued_to:
-            if key == 'emailAddress':
-                email = dict_issued_to[key]
+            if key == b'emailAddress':
+                email = dict_issued_to[key].decode('utf-8')
             else:
                 issued_to += "%s=%s\n" % (key, dict_issued_to[key])
-
-        if str(user.email) == email:
+        
+        if user.email == email:
             item = assoc.mapiobj.CreateMessage(None, MAPI_ASSOCIATED)
-            item.SetProps([SPropValue(PR_SUBJECT, email),
-                                  SPropValue(PR_MESSAGE_CLASS, messageclass),
-                                  SPropValue(PR_MESSAGE_DELIVERY_TIME, date_after),
-                                  SPropValue(PR_CLIENT_SUBMIT_TIME, date_before),
-                                  SPropValue(PR_SENDER_NAME, str(int(cert_data.get_serial_number()))),
-                                  SPropValue(PR_SENDER_EMAIL_ADDRESS, issued_by),
-                                  SPropValue(PR_SUBJECT_PREFIX, issued_to),
-                                  SPropValue(PR_RECEIVED_BY_NAME,  str(cert_data.digest("sha1"))),
-                                  SPropValue(PR_INTERNET_MESSAGE_ID,  str(cert_data.digest("md5"))),
-                                  SPropValue(PR_BODY,  str(base64.b64encode(p12)))])
+
+            item.SetProps([SPropValue(PR_SUBJECT, email.encode('utf-8')),
+                           SPropValue(PR_MESSAGE_CLASS, messageclass.encode('utf-8')),
+                           SPropValue(PR_MESSAGE_DELIVERY_TIME, date_after),
+                           SPropValue(PR_CLIENT_SUBMIT_TIME, date_before),
+                           SPropValue(PR_SENDER_NAME, str(cert_data.get_serial_number()).encode('utf-8')),
+                           SPropValue(PR_SENDER_EMAIL_ADDRESS, issued_by.encode('utf-8')),
+                           SPropValue(PR_SUBJECT_PREFIX, issued_to.encode('utf-8')),
+                           SPropValue(PR_RECEIVED_BY_NAME,  cert_data.digest("sha1")),
+                           SPropValue(PR_INTERNET_MESSAGE_ID,  cert_data.digest("md5")),
+                           SPropValue(PR_BODY,  base64.b64encode(p12.export()))])
             item.SaveChanges(KEEP_OPEN_READWRITE)
             print('Imported private certificate')
         else:
