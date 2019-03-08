@@ -179,12 +179,12 @@ Change the language
 """
 def language(user, language):
     settings = read_settings(user)
-    # Get language from PR_LANGUAGE 
-  	if language == 'userdefined':
+    # Get language from PR_LANGUAGE
+    if language == 'userdefined':
         try:
             language = user.prop(PR_LANGUAGE).value
         except:
-            print('User language is not defined using en_GB as fallback'
+            print('User language is not defined using en_GB as fallback')
             language = 'en_GB'
             
     if not settings['settings']['zarafa']['v1'].get('main'):
