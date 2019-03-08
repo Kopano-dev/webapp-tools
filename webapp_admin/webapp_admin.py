@@ -58,6 +58,12 @@ def opt_args(print_help=None):
     group.add_option("--default-signature", dest="default_signature", action="store_true", help="Set signature as default one")
     parser.add_option_group(group)
 
+    # Categories setting option group
+    group = OptionGroup(parser, "Categories", "")
+    group.add_option("--export-categories", dest="export_categories", action="store_true", help="Export Categories (name and color)")
+    group.add_option("--import-categories", dest="import_categories", action="store_true", help="Import Categories (name and color)")
+
+    parser.add_option_group(group)
     # S/MIME option group
     group = OptionGroup(parser, "S/MIME", "")
     group.add_option("--export-smime", dest="export_smime", action="store_true", help="Export private S/MIME certificate")
@@ -253,6 +259,58 @@ def restore_signature(user, filename, replace=None, default=None):
 
     write_settings(user, json.dumps(settings))
 
+"""
+Export categories from users store
+
+:param user: The user
+:param location: The location to store the certificiate. If location is empty current dir is used
+"""
+def export_categories(user, location=None):
+    if location:
+        backup_location = location
+    else:
+        backup_location = '.'
+    # first check if persistent settings exist
+    if not user.store.get_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W):
+        print('Categories are not customized yet, so nothing to export')
+
+    persistent_settings =  json.loads(user.store.prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W).value)
+
+    # Get categories
+    if not persistent_settings['settings']['kopano']['main'].get('categories'):
+        print('Categories are not customized yet, so nothing to export')
+
+    categories = persistent_settings['settings']['kopano']['main']['categories']
+    f = open('%s/%s-categories.json' % (backup_location, user.name), 'w')
+    f.write(json.dumps(categories, sort_keys=True, indent=4, separators=(',', ': ')))
+    f.close()
+
+    print('Creating categories backup for user {}'.format(user.name))
+
+
+"""
+Import categories from users store
+
+:param user: The user
+:param filename: The filename of the signature 
+"""
+def import_categories(user, filename=None):
+    if filename:
+        restorename = filename
+    else:
+        restorename= '%s-categories.json' % user.name
+    with open(restorename) as data_file:
+        data = json.load(data_file)
+
+    if not user.store.get_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W):
+        persistent_settings ={'settings': {'kopano': {'main': {'categories':data}}}}
+    else:
+        persistent_settings = user.store.get_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W)
+        persistent_settings['settings']['kopano']['main']['categories'] = data
+
+    print('Restoring categories for user {}'.format(user.name))
+    user.store.create_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W, json.dumps(persistent_settings).decode('utf-8'))
+
 
 """
 Export S/MIME certificate from users store
@@ -391,6 +449,11 @@ def main():
         if options.change_locale:
             change_locale(user, options.change_locale)
 
+        #Categories
+        if options.export_categories:
+            export_categories(user, options.change_locale)
+        if options.import_categories:
+            import_categories(user, options.file)
         # S/MIME import/export
         if options.export_smime:
             export_smime(user, options.location, options.public_smime)
