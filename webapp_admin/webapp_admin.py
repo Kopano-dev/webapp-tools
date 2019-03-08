@@ -42,10 +42,10 @@ def opt_args(print_help=None):
 
     # Common option group
     group = OptionGroup(parser, "Common", "")
+    group.add_option("--all-users", dest="all_users", action="store_true", help="Run for all users")
     group.add_option("--location", dest="location", action="store", help="Change location where scripts saves the files")
     group.add_option("--file", dest="file", action="store", help="Use specific file")
     group.add_option("--backup", dest="backup", action="store_true", help="Backup Webapp settings")
-    group.add_option("--change-locale", dest="change_locale", action="store", help="Set new locale (e.g. en_GB or nl_NL)")
     group.add_option("--restore", dest="restore", action="store_true", help="Restore Webapp settings")
     group.add_option("--reset", dest="reset", action="store_true", help="Reset WebApp settings")
     parser.add_option_group(group)
@@ -75,9 +75,11 @@ def opt_args(print_help=None):
 
     # WebApp setting option group
     group = OptionGroup(parser, "webapp-settings", "")
+    group.add_option("--language", dest="language", action="store", help="Set new language (e.g. en_GB or nl_NL)")
     group.add_option("--theme", dest="theme", action="store", help="Change theme (e.g. dark)")
     group.add_option("--free-busy", dest="freebusy", action="store", help="Change free/busy time span in months")
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
+    group.add_option("--htmleditor", dest="htmleditor", action="store", help="Change the HTML editor (e.g. full_tinymce)")
     parser.add_option_group(group)
 
     # Advanced option group
@@ -173,14 +175,22 @@ def restore(user, filename=None):
 Change the language
 
 :param user: The user
-:param locale: The language that should be used. Format e.g. "en_GB"
+:param language: The language that should be used. Format e.g. "en_GB"
 """
-def change_locale(user, locale):
+def language(user, language):
     settings = read_settings(user)
+    # Get language from PR_LANGUAGE 
+  	if language == 'userdefined':
+        try:
+            language = user.prop(PR_LANGUAGE).value
+        except:
+            print('User language is not defined using en_GB as fallback'
+            language = 'en_GB'
+            
     if not settings['settings']['zarafa']['v1'].get('main'):
         settings['settings']['zarafa']['v1']['main'] = {}
-    settings['settings']['zarafa']['v1']['main']['language'] = locale
-    print('Setting locale to: {}'.format(locale))
+    settings['settings']['zarafa']['v1']['main']['language'] = language
+    print('Setting locale to: {}'.format(language))
     write_settings(user, json.dumps(settings))
 
 
@@ -332,15 +342,15 @@ def export_smime(user, location=None, public=None):
         return
 
     for cert in certificates:
-        if public and cert.prop(PR_MESSAGE_CLASS).value == 'WebApp.Security.Public':
+        if public and cert.prop(PR_MESSAGE_CLASS_w).value == 'WebApp.Security.Public':
             extension = 'pub'
-            body = cert.body.text
+            body = cert.text
         else:
             extension = 'pfx'
-            body = base64.b64decode(cert.body.text)
+            body = base64.b64decode(cert.text)
 
-            print('found {} certificate {} (serial: {})'.format(cert.prop(PR_MESSAGE_CLASS).value, cert.subject, cert.prop(PR_SENDER_NAME).value))
-            with open("%s/%s-%s.%s" % (backup_location, cert.subject, cert.prop(PR_SENDER_NAME).value, extension), "w") as text_file:
+            print('found {} certificate {} (serial: {})'.format(cert.prop(PR_MESSAGE_CLASS_W).value, cert.subject, cert.prop(PR_SENDER_NAME_W).value))
+            with open("%s/%s-%s.%s" % (backup_location, cert.subject, cert.prop(PR_SENDER_NAME_W).value, extension), "wb") as text_file:
                 text_file.write(body)
 
 
@@ -360,7 +370,7 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
         passwd = ''
 
     assoc = user.store.root.associated
-    with open(cert_file) as f:
+    with open(cert_file, 'rb') as f:
         cert = f.read()
     if not public:
         messageclass = 'WebApp.Security.Private'
@@ -370,13 +380,13 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
             print(e)
             sys.exit(1)
         except Exception as e:
-            print(e.message)
+            print(e)
             sys.exit(1)
-
+	
         certificate = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, p12.get_certificate())
         cert_data = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
-        date_before = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notBefore(), "%Y%m%d%H%M%SZ" ).timetuple()))
-        date_after = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notAfter(), "%Y%m%d%H%M%SZ" ).timetuple()))
+        date_before = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notBefore().decode('utf-8'), "%Y%m%d%H%M%SZ" ).timetuple()))
+        date_after = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notAfter().decode('utf-8'), "%Y%m%d%H%M%SZ" ).timetuple()))
 
         issued_by = ""
         dict_issued_by = dict(cert_data.get_issuer().get_components())
@@ -386,23 +396,24 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
         issued_to = ""
         dict_issued_to = dict(cert_data.get_subject().get_components())
         for key in dict_issued_to:
-            if key == 'emailAddress':
-                email = dict_issued_to[key]
+            if key == b'emailAddress':
+                email = dict_issued_to[key].decode('utf-8')
             else:
                 issued_to += "%s=%s\n" % (key, dict_issued_to[key])
-
-        if str(user.email) == email:
+        
+        if user.email == email:
             item = assoc.mapiobj.CreateMessage(None, MAPI_ASSOCIATED)
-            item.SetProps([SPropValue(PR_SUBJECT, email),
-                                  SPropValue(PR_MESSAGE_CLASS, messageclass),
-                                  SPropValue(PR_MESSAGE_DELIVERY_TIME, date_after),
-                                  SPropValue(PR_CLIENT_SUBMIT_TIME, date_before),
-                                  SPropValue(PR_SENDER_NAME, str(int(cert_data.get_serial_number()))),
-                                  SPropValue(PR_SENDER_EMAIL_ADDRESS, issued_by),
-                                  SPropValue(PR_SUBJECT_PREFIX, issued_to),
-                                  SPropValue(PR_RECEIVED_BY_NAME,  str(cert_data.digest("sha1"))),
-                                  SPropValue(PR_INTERNET_MESSAGE_ID,  str(cert_data.digest("md5"))),
-                                  SPropValue(PR_BODY,  str(base64.b64encode(p12)))])
+
+            item.SetProps([SPropValue(PR_SUBJECT, email.encode('utf-8')),
+                           SPropValue(PR_MESSAGE_CLASS, messageclass.encode('utf-8')),
+                           SPropValue(PR_MESSAGE_DELIVERY_TIME, date_after),
+                           SPropValue(PR_CLIENT_SUBMIT_TIME, date_before),
+                           SPropValue(PR_SENDER_NAME, str(cert_data.get_serial_number()).encode('utf-8')),
+                           SPropValue(PR_SENDER_EMAIL_ADDRESS, issued_by.encode('utf-8')),
+                           SPropValue(PR_SUBJECT_PREFIX, issued_to.encode('utf-8')),
+                           SPropValue(PR_RECEIVED_BY_NAME,  cert_data.digest("sha1")),
+                           SPropValue(PR_INTERNET_MESSAGE_ID,  cert_data.digest("md5")),
+                           SPropValue(PR_BODY,  base64.b64encode(p12.export()))])
             item.SaveChanges(KEEP_OPEN_READWRITE)
             print('Imported private certificate')
         else:
@@ -410,24 +421,44 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
 
 
 """
+Custom function to merge two dictionaries.
+Previously we used the internal dotty function for this,
+but this function caused undesired behavior
+
+:param dict1: The first dictionary
+:param dict2: The second dictionary
+"""
+def mergedicts(dict1, dict2):
+    for k in set(dict1.keys()).union(dict2.keys()):
+        if k in dict1 and k in dict2:
+            if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
+                yield (k, dict(mergedicts(dict1[k], dict2[k])))
+            else:
+                yield (k, dict2[k])
+        elif k in dict1:
+            yield (k, dict1[k])
+        else:
+            yield (k, dict2[k])
+
+
+"""
 Inject webapp settings into the users store
 
 :param user: The user
 :param data: The webapp setting
-:param removed: Remove old setting and write new setting
 """
-def advanced_inject(user, data, removed=None):
+def advanced_inject(user, data):
     settings = read_settings(user)
     split_data = data.split('=')
 
     value = split_data[1].lstrip().rstrip()
-    dot = dotty(settings)
-    if removed:
-        del dot[split_data[0].rstrip()]
-    else:
-        dot[split_data[0].rstrip()] = value
+    dot = dotty()
+    dot[split_data[0].rstrip()] = value
+
     new_data = dot.to_dict()
-    write_settings(user, json.dumps(new_data))
+    new_settings = dict(mergedicts(settings, new_data))
+
+    write_settings(user, json.dumps(new_settings))
 
     
 """
@@ -438,6 +469,13 @@ def main():
         opt_args(True)
     options, args = opt_args()
 
+    # Always first!
+    # If the script should execute for all users
+    # The admin should pass the '--all-users' parameter
+    if not options.users and not options.all_users:
+        print('There are no users specified. Use "--all-users" to run for all users')
+        sys.exit(1)
+
     for user in kopano.Server(options).users(options.users):
         # Backup and restore
         if options.backup:
@@ -446,8 +484,8 @@ def main():
             restore(user, options.file)
 
         # Language
-        if options.change_locale:
-            change_locale(user, options.change_locale)
+        if options.language:
+            language(user, options.language)
 
         #Categories
         if options.export_categories:
@@ -474,7 +512,7 @@ def main():
         if options.theme:
             setting = 'settings.zarafa.v1.main.active_theme = {}'.format(options.theme)
             advanced_inject(user, setting)
-            print('Theme changed to {}'.format(options.icons))
+            print('Theme changed to {}'.format(options.theme))
 
         # Free busy publishing
         if options.freebusy:
@@ -490,9 +528,23 @@ def main():
 
         # Icon set
         if options.icons:
+            accepted_icons = {'Breeze', 'Classic'}
+            if not options.icons in accepted_icons:
+                print('Valid syntax: Breeze or Classic')
+                sys.exit(1)
             setting = 'settings.zarafa.v1.main.active_iconset = {}'.format(options.icons)
             advanced_inject(user, setting)
             print('icon set changed to {}'.format(options.icons))
+
+        # Editor
+        if options.htmleditor:
+            accepted_editors = {'htmleditor-minimaltiny', 'full_tinymce'}
+            if not options.htmleditor in accepted_editors:
+                print('Valid syntax: htmleditor-minimaltiny or full_tinymce')
+                sys.exit(1)
+            setting = 'settings.zarafa.v1.contexts.mail.html_editor = {}'.format(options.htmleditor)
+            advanced_inject(user, setting)
+            print('Editor changed to {}'.format(options.htmleditor))
 
         # Always at last!!!
         if options.reset:
