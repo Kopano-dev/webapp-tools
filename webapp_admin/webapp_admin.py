@@ -80,6 +80,7 @@ def opt_args(print_help=None):
     group.add_option("--free-busy", dest="freebusy", action="store", help="Change free/busy time span in months")
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
     group.add_option("--htmleditor", dest="htmleditor", action="store", help="Change the HTML editor (e.g. full_tinymce)")
+    group.add_option("--remove-state", dest="remove_state", action="store_true", help="Remove all the state settings")
     parser.add_option_group(group)
 
     # Advanced option group
@@ -534,7 +535,7 @@ def main():
                 sys.exit(1)
             setting = 'settings.zarafa.v1.main.active_iconset = {}'.format(options.icons)
             advanced_inject(user, setting)
-            print('icon set changed to {}'.format(options.icons))
+            print('Icon set changed to {}'.format(options.icons))
 
         # Editor
         if options.htmleditor:
@@ -545,6 +546,13 @@ def main():
             setting = 'settings.zarafa.v1.contexts.mail.html_editor = {}'.format(options.htmleditor)
             advanced_inject(user, setting)
             print('Editor changed to {}'.format(options.htmleditor))
+
+        # State settings
+        if options.remove_state:
+           settings = read_settings(user)
+           settings['settings']['zarafa']['v1']['state'] = {}
+           write_settings(user, json.dumps(settings))
+           print('Removed state settings for {}'.format(user.name))
 
         # Always at last!!!
         if options.reset:
