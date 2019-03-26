@@ -490,7 +490,7 @@ def main():
 
         #Categories
         if options.export_categories:
-            export_categories(user, options.change_locale)
+            export_categories(user, options.file)
         if options.import_categories:
             import_categories(user, options.file)
         # S/MIME import/export
