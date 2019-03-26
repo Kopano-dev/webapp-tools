@@ -316,11 +316,11 @@ def import_categories(user, filename=None):
     if not user.store.get_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W):
         persistent_settings ={'settings': {'kopano': {'main': {'categories':data}}}}
     else:
-        persistent_settings = user.store.get_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W)
+        persistent_settings = json.loads(user.store.get_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W).value)
         persistent_settings['settings']['kopano']['main']['categories'] = data
 
     print('Restoring categories for user {}'.format(user.name))
-    user.store.create_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W, json.dumps(persistent_settings).decode('utf-8'))
+    user.store.create_prop(PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W, json.dumps(persistent_settings))
 
 
 """
