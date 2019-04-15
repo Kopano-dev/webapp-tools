@@ -81,6 +81,7 @@ def opt_args(print_help=None):
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
     group.add_option("--htmleditor", dest="htmleditor", action="store", help="Change the HTML editor (e.g. full_tinymce)")
     group.add_option("--remove-state", dest="remove_state", action="store_true", help="Remove all the state settings")
+    group.add_option("--add-safesender", dest="addsender", action="store", help="Add domain to safe sender list")
     parser.add_option_group(group)
 
     # Advanced option group
@@ -448,11 +449,14 @@ Inject webapp settings into the users store
 :param user: The user
 :param data: The webapp setting
 """
-def advanced_inject(user, data):
+def advanced_inject(user, data, value_type='string'):
     settings = read_settings(user)
     split_data = data.split('=')
 
     value = split_data[1].lstrip().rstrip()
+    if value_type == 'list':
+        value = value.split(',')
+
     dot = dotty()
     dot[split_data[0].rstrip()] = value
 
@@ -553,6 +557,13 @@ def main():
            settings['settings']['zarafa']['v1']['state'] = {}
            write_settings(user, json.dumps(settings))
            print('Removed state settings for {}'.format(user.name))
+
+	# Add sender to safe sender list
+        if options.addsender:
+           settings = read_settings(user)
+           setting = 'settings.zarafa.v1.contexts.mail.safe_senders_list = {}'.format(options.addsender)
+           advanced_inject(user, setting, 'list')
+           print('{}'.format(options.addsender), 'Added to safe sender list')
 
         # Always at last!!!
         if options.reset:
