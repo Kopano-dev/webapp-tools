@@ -474,7 +474,6 @@ def main():
         opt_args(True)
     options, args = opt_args()
 
-    # Always first!
     # If the script should execute for all users
     # The admin should pass the '--all-users' parameter
     if not options.users and not options.all_users:
@@ -558,7 +557,7 @@ def main():
            write_settings(user, json.dumps(settings))
            print('Removed state settings for {}'.format(user.name))
 
-	# Add sender to safe sender list
+	    # Add sender to safe sender list
         if options.addsender:
            settings = read_settings(user)
            setting = 'settings.zarafa.v1.contexts.mail.safe_senders_list = {}'.format(options.addsender)
