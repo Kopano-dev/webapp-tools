@@ -75,7 +75,7 @@ def opt_args(print_help=None):
 
     # WebApp setting option group
     group = OptionGroup(parser, "webapp-settings", "")
-    group.add_option("--language", dest="language", action="store", help="Set new language (e.g. en_GB or nl_NL)")
+    group.add_option("--language", dest="language", action="store", type="string", help="Set new language (e.g. en_GB or nl_NL)")
     group.add_option("--theme", dest="theme", action="store", help="Change theme (e.g. dark)")
     group.add_option("--free-busy", dest="freebusy", action="store", help="Change free/busy time span in months")
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
