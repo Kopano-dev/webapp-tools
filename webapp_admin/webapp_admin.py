@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
+from pkg_resources import parse_version
 import sys
 try:
     import kopano
@@ -16,8 +17,7 @@ import base64
 try:
     import OpenSSL.crypto
 except ImportError:
-    print('pip3 install pyOpenSSL')
-    sys.exit(1)
+    pass
 from datetime import datetime
 from time import mktime
 import getpass
@@ -26,7 +26,8 @@ from optparse import OptionGroup
 try:
     from dotty_dict import dotty
 except ImportError:
-    print('dotty_dict not found on your system. Run pip3 install dotty_dict')
+    pass 
+    
 
 
 """
@@ -332,6 +333,7 @@ Export S/MIME certificate from users store
 :param public: Export public certificate part
 """
 def export_smime(user, location=None, public=None):
+
     if location:
         backup_location = location
     else:
@@ -366,6 +368,9 @@ Import S/MIME certificate into users store
 :param public: Import public certificate part
 """
 def import_smime(user, cert_file, passwd, ask_password=None, public=None):
+    if not sys.modules.get('OpenSSL'):
+        print('PyOpenSSl not installed \npip3 install pyOpenSSL')
+        sys.exit(1)
     if ask_password:
         passwd = getpass.getpass()
     elif not passwd:
@@ -450,6 +455,9 @@ Inject webapp settings into the users store
 :param data: The webapp setting
 """
 def advanced_inject(user, data, value_type='string'):
+    if not sys.modules.get('dotty_dict'):
+        print('dotty_dict not found on your system. \nRun pip3 install dotty_dict')
+        sys.exit(1)
     settings = read_settings(user)
     split_data = data.split('=')
 
@@ -479,8 +487,13 @@ def main():
     if not options.users and not options.all_users:
         print('There are no users specified. Use "--all-users" to run for all users')
         sys.exit(1)
+    # Since kopano 8.7.0 Server is renamed to server check with one we need to use
+    if parse_version(kopano.__version__) > parse_version('8.7.0'):
+        server = kopano.server(options)
+    else:
+        server = kopano.Server(options)
 
-    for user in kopano.Server(options).users(options.users):
+    for user in server.users(options.users):
         # Backup and restore
         if options.backup:
             backup(user, options.location)
