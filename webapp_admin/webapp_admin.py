@@ -487,11 +487,8 @@ def main():
     if not options.users and not options.all_users:
         print('There are no users specified. Use "--all-users" to run for all users')
         sys.exit(1)
-    # Since kopano 8.7.0 Server is renamed to server check with one we need to use
-    if parse_version(kopano.__version__) > parse_version('8.7.0'):
-        server = kopano.server(options)
-    else:
-        server = kopano.Server(options)
+
+    server = kopano.Server(options)
 
     for user in server.users(options.users):
         # Backup and restore
