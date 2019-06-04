@@ -54,11 +54,11 @@ def files(options):
     files = options.file.split(',')
     for file in files:
         configfile = ConfigObj(file)
-        if configfile['setting']['use_zarafa_credentials']:
-            username = configfile['setting']['default_user']
-        else:
+        if configfile['setting'].as_bool('use_zarafa_credentials'):
             username = options.user
-        password = encode(configfile['setting']['default_password'])
+        else:
+            username = configfile['setting'].get('default_user', 'does not matter')
+        password = encode(configfile['setting'].get('default_password', 'does not matter'))
         backendoptions = {
             'ftp': {"backend_features": {
                 "Streaming": "true", }},
@@ -93,6 +93,7 @@ def files(options):
             address = configfile['setting']['server_address']
             ssl = configfile['setting']['server_ssl']
         id = str(uuid.uuid4())
+
         filesjson['accounts'][id] = {
             "status": "ok",
             "backend_config": {
@@ -101,7 +102,7 @@ def files(options):
                 "server_address": encode(address).decode('utf-8'),
                 "server_ssl": ssl,
                 "current_account_id": encode('d4cacda458a2a26c301f2b7d75ada530').decode('utf-8'),
-                "use_zarafa_credentials": configfile['setting']['use_zarafa_credentials'],
+                "use_zarafa_credentials": configfile['setting'].as_bool('use_zarafa_credentials'),
                 "user": encode(username).decode('utf-8'),
                 "password": password.decode('utf-8'),
                 "server_port": encode(port).decode('utf-8')
