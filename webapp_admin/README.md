@@ -22,3 +22,7 @@ If you want to make a change for all users pass the --all-users parameter. Examp
 - python-mapi
 - OpenSSL
 - dotty_dict
+
+# License
+
+licensed under GNU Affero General Public License v3.
