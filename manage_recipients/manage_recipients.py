@@ -28,7 +28,17 @@ def main():
         sys.exit(0)
 
     user = kopano.Server(options).user(options.user)
-    webapp = user.store.prop(0X6773001F).value
+    
+    if user.store:
+      try:
+        webapp = user.store.prop(0X6773001F).value
+      except kopano.errors.NotFoundError as ke:
+        print("no such property for user(no stored recipients?). exiting")
+        sys.exit(0)
+    else:
+      print("user has no store. exiting")
+      sys.exit(0)
+    
     webapp = json.loads(webapp)
 
     if options.backup:
