@@ -20,3 +20,7 @@ Use the username and password provided in the config file
 
 - python-kopano
 - python-mapi
+
+# License
+
+licensed under GNU Affero General Public License v3.
