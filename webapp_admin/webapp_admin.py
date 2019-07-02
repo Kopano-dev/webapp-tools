@@ -462,6 +462,10 @@ def advanced_inject(user, data, value_type='string'):
     split_data = data.split('=')
 
     value = split_data[1].lstrip().rstrip()
+    if value.lower() == 'true': 
+        value = True
+    elif value.lower() == 'false':
+        value = False
     if value_type == 'list':
         value = value.split(',')
 
