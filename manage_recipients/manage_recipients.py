@@ -32,8 +32,8 @@ def main():
     if user.store:
       try:
         webapp = user.store.prop(0X6773001F).value
-      except kopano.errors.NotFoundError as ke:
-        print("no such property for user(no stored recipients?). exiting")
+      except kopano.errors.NotFoundError:
+        print("no stored recipients in this store(no such property for user). exiting")
         sys.exit(0)
     else:
       print("user has no store. exiting")
