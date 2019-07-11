@@ -1,6 +1,6 @@
 # WebApp Admin
 
->**This tool is under contruction. Use caution on a live server. Always make a backup of the user settings and test first before modifing**
+>**Always make a backup of the user settings and test the new settings afterwards**
 
 WebApp admin is a command-line interface to modify, inject and export WebApp settings.
 

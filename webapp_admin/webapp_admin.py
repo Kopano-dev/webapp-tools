@@ -26,8 +26,7 @@ from optparse import OptionGroup
 try:
     from dotty_dict import dotty
 except ImportError:
-    pass 
-    
+    pass
 
 
 """
@@ -83,6 +82,7 @@ def opt_args(print_help=None):
     group.add_option("--htmleditor", dest="htmleditor", action="store", help="Change the HTML editor (e.g. full_tinymce)")
     group.add_option("--remove-state", dest="remove_state", action="store_true", help="Remove all the state settings")
     group.add_option("--add-safesender", dest="addsender", action="store", help="Add domain to safe sender list")
+    group.add_option("--polling-interval", dest="pollinginterval", action="store", help="Change the polling interval (seconds)")
     parser.add_option_group(group)
 
     # Advanced option group
@@ -577,6 +577,18 @@ def main():
            setting = 'settings.zarafa.v1.contexts.mail.safe_senders_list = {}'.format(options.addsender)
            advanced_inject(user, setting, 'list')
            print('{}'.format(options.addsender), 'Added to safe sender list')
+
+        # Polling interval
+        if options.pollinginterval:
+            try:
+                value = int(options.pollinginterval)
+            except ValueError:
+                print('Invalid number used. Please specify the value in seconds')
+                sys.exit(1)
+            settings = read_settings(user)
+            setting = 'settings.zarafa.v1.main.reminder.polling_interval = {}'.format(options.pollinginterval)
+            advanced_inject(user, setting)
+            print('Polling interval changed to', '{}'.format(options.pollinginterval))
 
         # Always at last!!!
         if options.reset:
