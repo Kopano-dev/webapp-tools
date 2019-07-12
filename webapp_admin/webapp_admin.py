@@ -2,15 +2,18 @@
 # encoding: utf-8
 from pkg_resources import parse_version
 import sys
+if sys.version_info[0] < 3:
+    print('This tool works with Python3. Not Python 2')
+    sys.exit(1)
 try:
     import kopano
 except ImportError:
-    print('python-kopano should be installed on your system')
+    print('python3-kopano should be installed on your system')
     sys.exit(1)
 try:
     from MAPI.Util import *
 except ImportError:
-    print('python-mapi should be installed on your system')
+    print('python3-mapi should be installed on your system')
     sys.exit(1)
 import json
 import base64
