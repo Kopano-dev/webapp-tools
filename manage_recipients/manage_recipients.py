@@ -2,8 +2,10 @@
 #encoding: utf-8
 
 import kopano
+from kopano.errors import NotFoundError
 from MAPI.Util import *
 import json
+import sys
 
 
 def opt_args():
@@ -28,7 +30,11 @@ def main():
         sys.exit(0)
 
     user = kopano.Server(options).user(options.user)
-    webapp = user.store.prop(0X6773001F).value
+    try:
+        webapp = user.store.prop(0X6773001F).value
+    except NotFoundError:
+        print('Property PR_EC_RECIPIENT_HISTORY_JSON_W not found. User might have never used recipient history before.', file=sys.stderr)
+        sys.exit(1)
     webapp = json.loads(webapp)
 
     if options.backup:
