@@ -24,7 +24,7 @@ def main():
     options, args = opt_args()
 
     if not options.user:
-        print 'Please use:\n %s --user <username>' % (sys.argv[0])
+        print('Please use:\n %s --user <username>' % (sys.argv[0]))
         sys.exit(0)
 
     user = kopano.Server(options).user(options.user)
@@ -50,8 +50,8 @@ def main():
         sys.exit(0)
 
     if options.list:
-        print json.dumps(webapp, sort_keys=True,
-                         indent=4, separators=(',', ': '))
+        print(json.dumps(webapp, sort_keys=True,
+                         indent=4, separators=(',', ': ')))
         sys.exit(0)
 
     if options.remove:
@@ -59,7 +59,7 @@ def main():
         for rec in webapp['recipients']:
             if options.remove in rec['display_name'] or options.remove in rec['smtp_address'] \
                     or options.remove in rec['email_address']:
-                print 'removing contact %s [%s]' % (rec['display_name'], rec['smtp_address'])
+                print('removing contact %s [%s]' % (rec['display_name'], rec['smtp_address']))
             else:
                 newlist['recipients'].append(rec)
 
