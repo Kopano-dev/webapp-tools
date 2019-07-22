@@ -33,11 +33,15 @@ def main():
     try:
         webapp = user.store.prop(0X6773001F).value
     except NotFoundError:
-        print('Property PR_EC_RECIPIENT_HISTORY_JSON_W not found. User might have never used recipient history before.', file=sys.stderr)
-        sys.exit(1)
+        webapp = dict(recipients=[])
+
     webapp = json.loads(webapp)
 
     if options.backup:
+        if len(webapp['recipients']) == 0:
+            print('Property PR_EC_RECIPIENT_HISTORY_JSON_W not found . User might have never used recipient history before.', file=sys.stderr)
+            sys.exit(1)
+            
         f = open('%s.json' % user.name, 'w')
         f.write(json.dumps(webapp, sort_keys=True,
                            indent=4, separators=(',', ': ')))
