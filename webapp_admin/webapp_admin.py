@@ -22,6 +22,7 @@ from datetime import datetime
 from time import mktime
 import getpass
 import time
+import os
 from optparse import OptionGroup
 try:
     from dotty_dict import dotty
@@ -213,9 +214,9 @@ def backup_signature(user, location=None):
     except Exception as e:
         print('Could not load WebApp settings for user {} (Error: {})'.format(user.name, repr(e)))
         sys.exit(1)
-    if settings['settings']['zarafa']['v1']['contexts']['mail'].get('signatures'):
+    if type(settings['settings']['zarafa']['v1']['contexts']['mail']) is dict and settings['settings']['zarafa']['v1']['contexts']['mail'].get('signatures'):
         for item in settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']['all']:
-            name = settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']['all'][item]['name']
+            name = settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']['all'][item]['name'].replace(os.path.sep, '_')
             filename = '%s/%s_%s_%s.html' % (backup_location, user.name, name.replace(' ', '-'), item)
             with open(filename, 'w') as outfile:
                 print('Dumping: \'{}\' to \'{}\' '.format(name, filename))
