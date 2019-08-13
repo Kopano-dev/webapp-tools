@@ -23,6 +23,8 @@ If you want to make a change for all users pass the --all-users parameter. Examp
 - OpenSSL
 - dotty_dict
 
+For debian 10 python3-pkg-resources is required 
+
 # License
 
 licensed under GNU Affero General Public License v3.
