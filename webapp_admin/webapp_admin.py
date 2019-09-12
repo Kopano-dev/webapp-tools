@@ -62,8 +62,8 @@ def opt_args(print_help=None):
     group = OptionGroup(parser, "Categories", "")
     group.add_option("--export-categories", dest="export_categories", action="store_true", help="Export Categories (name and color)")
     group.add_option("--import-categories", dest="import_categories", action="store_true", help="Import Categories (name and color)")
-
     parser.add_option_group(group)
+
     # S/MIME option group
     group = OptionGroup(parser, "S/MIME", "")
     group.add_option("--export-smime", dest="export_smime", action="store_true", help="Export private S/MIME certificate")
@@ -81,8 +81,9 @@ def opt_args(print_help=None):
     group.add_option("--icons", dest="icons", action="store", help="Change icons (e.g. breeze)")
     group.add_option("--htmleditor", dest="htmleditor", action="store", help="Change the HTML editor (e.g. full_tinymce)")
     group.add_option("--remove-state", dest="remove_state", action="store_true", help="Remove all the state settings")
-    group.add_option("--add-safesender", dest="addsender", action="store", help="Add domain to safe sender list")
-    group.add_option("--polling-interval", dest="pollinginterval", action="store", help="Change the polling interval (seconds)")
+    group.add_option("--add-safesender", dest="add_sender", action="store", help="Add domain to safe sender list")
+    group.add_option("--polling-interval", dest="polling_interval", action="store", help="Change the polling interval (seconds)")
+    group.add_option("--calendar-resolution", dest="calendar_resolution", action="store", help="Change the calendar resolution (minutes)")
     parser.add_option_group(group)
 
     # Advanced option group
@@ -189,7 +190,7 @@ def language(user, language):
         except:
             print('User language is not defined using en_GB as fallback')
             language = 'en_GB'
-            
+
     if not settings['settings']['zarafa']['v1'].get('main'):
         settings['settings']['zarafa']['v1']['main'] = {}
     settings['settings']['zarafa']['v1']['main']['language'] = language
@@ -229,7 +230,7 @@ def backup_signature(user, location=None):
 Restore signature into the users store
 
 :param user: The user
-:param filename: The filename of the signature 
+:param filename: The filename of the signature
 :param replace: Remove all existing signatures for the restore signature
 :param default: Set the signature as default for new mail and replies
 """
@@ -272,6 +273,7 @@ def restore_signature(user, filename, replace=None, default=None):
 
     write_settings(user, json.dumps(settings))
 
+
 """
 Export categories from users store
 
@@ -305,7 +307,7 @@ def export_categories(user, location=None):
 Import categories from users store
 
 :param user: The user
-:param filename: The filename of the signature 
+:param filename: The filename of the signature
 """
 def import_categories(user, filename=None):
     if filename:
@@ -389,7 +391,7 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
         except Exception as e:
             print(e)
             sys.exit(1)
-	
+
         certificate = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, p12.get_certificate())
         cert_data = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
         date_before = MAPI.Time.unixtime(mktime(datetime.strptime(cert_data.get_notBefore().decode('utf-8'), "%Y%m%d%H%M%SZ" ).timetuple()))
@@ -407,7 +409,7 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
                 email = dict_issued_to[key].decode('utf-8')
             else:
                 issued_to += "%s=%s\n" % (key, dict_issued_to[key])
-        
+
         if user.email == email:
             item = assoc.mapiobj.CreateMessage(None, MAPI_ASSOCIATED)
 
@@ -462,7 +464,7 @@ def advanced_inject(user, data, value_type='string'):
     split_data = data.split('=')
 
     value = split_data[1].lstrip().rstrip()
-    if value.lower() == 'true': 
+    if value.lower() == 'true':
         value = True
     elif value.lower() == 'false':
         value = False
@@ -477,7 +479,7 @@ def advanced_inject(user, data, value_type='string'):
 
     write_settings(user, json.dumps(new_settings))
 
-    
+
 """
 Main function run with arguments
 """
@@ -566,29 +568,44 @@ def main():
 
         # State settings
         if options.remove_state:
-           settings = read_settings(user)
-           settings['settings']['zarafa']['v1']['state'] = {}
-           write_settings(user, json.dumps(settings))
-           print('Removed state settings for {}'.format(user.name))
+            settings = read_settings(user)
+            settings['settings']['zarafa']['v1']['state'] = {}
+            write_settings(user, json.dumps(settings))
+            print('Removed state settings for {}'.format(user.name))
 
-	    # Add sender to safe sender list
-        if options.addsender:
-           settings = read_settings(user)
-           setting = 'settings.zarafa.v1.contexts.mail.safe_senders_list = {}'.format(options.addsender)
-           advanced_inject(user, setting, 'list')
-           print('{}'.format(options.addsender), 'Added to safe sender list')
+        # Add sender to safe sender list
+        if options.add_sender:
+            settings = read_settings(user)
+            setting = 'settings.zarafa.v1.contexts.mail.safe_senders_list = {}'.format(options.add_sender)
+            advanced_inject(user, setting, 'list')
+            print('{}'.format(options.add_sender), 'Added to safe sender list for {}'.format(user.name))
 
         # Polling interval
-        if options.pollinginterval:
+        if options.polling_interval:
             try:
-                value = int(options.pollinginterval)
+                value = int(options.polling_interval)
             except ValueError:
                 print('Invalid number used. Please specify the value in seconds')
                 sys.exit(1)
             settings = read_settings(user)
-            setting = 'settings.zarafa.v1.main.reminder.polling_interval = {}'.format(options.pollinginterval)
+            setting = 'settings.zarafa.v1.main.reminder.polling_interval = {}'.format(options.polling_interval)
             advanced_inject(user, setting)
-            print('Polling interval changed to', '{}'.format(options.pollinginterval))
+            print('Polling interval changed to', '{}'.format(options.polling_interval), 'for {}'.format(user.name))
+
+        # Calendar resolution (zoom level)
+        if options.calendar_resolution:
+            try:
+                value = int(options.calendar_resolution)
+            except ValueError:
+                print('Invalid number used. Please specify the value in minutes')
+                sys.exit(1)
+            if value < 5 or value > 60:
+                print('Unsupported value used. Use a number between 5 and 60')
+                sys.exit(1)
+            settings = read_settings(user)
+            setting = 'settings.zarafa.v1.contexts.calendar.default_zoom_level = {}'.format(options.calendar_resolution)
+            advanced_inject(user, setting)
+            print('Calendar resolution changed to', '{}'.format(options.calendar_resolution), 'for {}'.format(user.name))
 
         # Always at last!!!
         if options.reset:

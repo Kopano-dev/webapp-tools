@@ -6,6 +6,9 @@ WebApp admin is a command-line interface to modify, inject and export WebApp set
 
 # Example Usage
 
+Overview of all options:
+> python3 webapp_admin -h
+
 Reset WebApp settings
 > python3 webapp_admin -u john --reset
 
@@ -23,7 +26,7 @@ If you want to make a change for all users pass the --all-users parameter. Examp
 - OpenSSL
 - dotty_dict
 
-For debian 10 python3-pkg-resources is required 
+For debian 10 python3-pkg-resources is required
 
 # License
 
