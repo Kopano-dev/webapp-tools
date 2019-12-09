@@ -54,6 +54,14 @@ def files(options):
     files = options.file.split(',')
     for file in files:
         configfile = ConfigObj(file)
+        
+        # Check if the settings section key is present in the file
+        try:
+            value = configfile['setting']
+        except KeyError:
+            print('Setting does not exist in', file)
+            continue
+        
         if configfile['setting'].as_bool('use_zarafa_credentials'):
             username = options.user
         else:
