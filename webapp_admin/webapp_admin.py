@@ -214,6 +214,8 @@ def backup_signature(user, location=None):
     except Exception as e:
         print('Could not load WebApp settings for user {} (Error: {})'.format(user.name, repr(e)))
         sys.exit(1)
+    if not settings['settings']['zarafa']['v1']['contexts'].get("mail"):
+        settings['settings']['zarafa']['v1']['contexts']['mail'] = {}
     if settings['settings']['zarafa']['v1']['contexts']['mail'].get('signatures'):
         for item in settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']['all']:
             name = settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']['all'][item]['name']
