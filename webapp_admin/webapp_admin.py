@@ -18,7 +18,7 @@ try:
     import OpenSSL.crypto
 except ImportError:
     pass
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import mktime
 import getpass
 import time
@@ -68,6 +68,7 @@ def opt_args(print_help=None):
     group = OptionGroup(parser, "S/MIME", "")
     group.add_option("--export-smime", dest="export_smime", action="store_true", help="Export private S/MIME certificate")
     group.add_option("--import-smime", dest="import_smime", action="store", help="Import private S/MIME certificate")
+    group.add_option("--remove-expired", dest="remove_expired", action="store_true", help="Remove expired public S/MIME certificates")
     group.add_option("--public", dest="public_smime", action="store_true", help="Export/Import public S/MIME certificate")
     group.add_option("--password", dest="password", action="store", help="set password")
     group.add_option("--ask-password", dest="ask_password", action="store_true", help="ask for password if needed")
@@ -350,7 +351,7 @@ def export_smime(user, location=None, public=None):
         return
 
     for cert in certificates:
-        if public and cert.prop(PR_MESSAGE_CLASS_w).value == 'WebApp.Security.Public':
+        if public and cert.prop(PR_MESSAGE_CLASS_W).value == 'WebApp.Security.Public':
             extension = 'pub'
             body = cert.text
         else:
@@ -430,6 +431,27 @@ def import_smime(user, cert_file, passwd, ask_password=None, public=None):
         else:
             print('Email address doesn\'t match')
 
+"""
+Remove expired S/MIME Public certificates
+
+:param user: The user
+"""
+def remove_expired_smime(user):
+    # unable to loop over the associated items so getting the items in a list instead
+    certificates =list(user.store.root.associated.items())
+
+    if len(certificates) == 0:
+        print('No certificates found')
+        return
+
+    now = datetime.now()
+    for cert in certificates:
+        # We only want to remove the public certificate
+        if cert.prop(PR_MESSAGE_CLASS_W).value == 'WebApp.Security.Public':
+            if cert.prop(PR_MESSAGE_DELIVERY_TIME).value < now:
+                print('deleting public certificate {} ({})'.format(cert.subject, cert.prop(PR_MESSAGE_DELIVERY_TIME).value))
+                user.store.root.associated.delete(cert)
+    
 
 """
 Custom function to merge two dictionaries.
@@ -439,6 +461,7 @@ but this function caused undesired behavior
 :param dict1: The first dictionary
 :param dict2: The second dictionary
 """
+
 def mergedicts(dict1, dict2):
     for k in set(dict1.keys()).union(dict2.keys()):
         if k in dict1 and k in dict2:
@@ -519,6 +542,8 @@ def main():
             export_smime(user, options.location, options.public_smime)
         if options.import_smime:
             import_smime(user, options.import_smime, options.password, options.ask_password, options.public_smime)
+        if options.remove_expired:
+            remove_expired_smime(user)
 
         # Signature
         if options.backup_signature:
