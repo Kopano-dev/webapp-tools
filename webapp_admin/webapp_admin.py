@@ -23,6 +23,7 @@ from time import mktime
 import getpass
 import time
 from optparse import OptionGroup
+from tabulate import tabulate
 try:
     from dotty_dict import dotty
 except ImportError:
@@ -48,6 +49,15 @@ def opt_args(print_help=None):
     group.add_option("--backup", dest="backup", action="store_true", help="Backup Webapp settings")
     group.add_option("--restore", dest="restore", action="store_true", help="Restore Webapp settings")
     group.add_option("--reset", dest="reset", action="store_true", help="Reset WebApp settings")
+    parser.add_option_group(group)
+
+    # Addionals stores group
+    group = OptionGroup(parser, "Store", "")
+    group.add_option("--add-store",   dest="add_store", action="store", help="Add shared store")
+    group.add_option("--del-store",   dest="del_store", action="store", help="Delete shared store")
+    group.add_option("--folder-type", dest="folder_type", action="store", help="Folder to add")
+    group.add_option("--subfolder",  dest="sub_folder", action="store_true", help="Add subfolders")
+    group.add_option("--list-stores", dest="list_stores", action="store_true", help="List shared stores")
     parser.add_option_group(group)
 
     # Signature option group
@@ -199,6 +209,73 @@ def language(user, language):
     write_settings(user, json.dumps(settings))
 
 
+"""
+Add shared store
+"""
+def add_store(user, user_to_add, folder_type, subfolder=False):
+    allowed_folder_types = ["all", "inbox", "calendar", "contact", "note", "task"]
+    if folder_type not in allowed_folder_types:
+        print("Unknown folder type allowed: {}".format(','.join(allowed_folder_types)))
+        sys.exit(1)
+
+    settings = read_settings(user)
+    if not settings['settings']['zarafa']['v1']['contexts'].get('hierarchy') or not settings['settings']['zarafa']['v1']['contexts']['hierarchy'].get('shared_stores'):
+        settings['settings']['zarafa']['v1']['contexts']['hierarchy']['shared_stores'] = {}
+
+    settings['settings']['zarafa']['v1']['contexts']['hierarchy']['shared_stores'][user_to_add]= {folder_type : {'folder_type': folder_type, 'show_subfolders': subfolder}}
+    print("Saving settings")
+    write_settings(user, json.dumps(settings))
+
+
+"""
+Delete shared store 
+"""
+def del_store(user, user_to_del, folder_type=None):
+    if folder_type:
+        allowed_folder_types = ["all", "inbox", "calendar", "contact", "note", "task"]
+        if folder_type not in allowed_folder_types:
+            print("Unknown folder type allowed: {}".format(','.join(allowed_folder_types)))
+            sys.exit(1)
+    
+
+    settings = read_settings(user)
+    if not settings['settings']['zarafa']['v1']['contexts'].get('hierarchy') or not settings['settings']['zarafa']['v1']['contexts']['hierarchy'].get('shared_stores'):
+        print("No additional stores found")
+        return
+
+    shared_store = settings['settings']['zarafa']['v1']['contexts']['hierarchy']['shared_stores'].get(user_to_del)
+    if not shared_store:
+        print("No additional stores found")
+        return
+    try:
+        if not folder_type:
+            settings['settings']['zarafa']['v1']['contexts']['hierarchy']['shared_stores'].pop(user_to_del)
+        else:
+            settings['settings']['zarafa']['v1']['contexts']['hierarchy']['shared_stores'][user_to_del].pop(folder_type)
+    except KeyError:
+        pass
+    print("Saving settings")
+    write_settings(user, json.dumps(settings))
+
+"""
+List all added stores
+"""
+def list_stores(user):
+    settings = read_settings(user) 
+
+    try:
+        stores =  settings['settings']['zarafa']['v1']['contexts']['hierarchy']['shared_stores']
+    except KeyError:
+        print("No additional stores found")
+        return
+    table_header = ["User", 'Folder type', 'Show subfolders']
+    table_data =[]
+    for user in stores:
+        for folder in stores[user]:
+            table_data.append([user, folder, stores[user][folder]['show_subfolders']])
+
+    print(tabulate(table_data, headers=table_header,tablefmt="grid"))
+    
 """
 Backup signature from the users store
 
@@ -532,11 +609,21 @@ def main():
         if options.language:
             language(user, options.language)
 
+        if options.add_store:
+            add_store(user, options.add_store, options.folder_type, options.sub_folder)
+
+        if options.del_store:
+            del_store(user, options.del_store, options.folder_type)
+
+        if options.list_stores:
+            list_stores(user)
+
         #Categories
         if options.export_categories:
             export_categories(user, options.file)
         if options.import_categories:
             import_categories(user, options.file)
+
         # S/MIME import/export
         if options.export_smime:
             export_smime(user, options.location, options.public_smime)
