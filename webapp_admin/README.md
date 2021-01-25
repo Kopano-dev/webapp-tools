@@ -20,7 +20,7 @@ If you want to make a change for all users pass the --all-users parameter. Examp
 
 ## Signatures
 
-To restore, replace and backup signatures we need a two part, underscore separated filename consisting of `a name` and `id`.\
+To restore, replace and backup signatures we need a two part, underscore separated filename consisting of a `name` and `id`.\
 
 Example single user: `this-is-my-signature_1234.html`\
 
