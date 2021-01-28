@@ -64,7 +64,7 @@ def opt_args(print_help=None):
     group = OptionGroup(parser, "Signature", "")
     group.add_option("--backup-signature", dest="backup_signature", action="store_true", help="Backup signature")
     group.add_option("--restore-signature", dest="restore_signature", action="store", help="Restore signature (need file name)")
-    group.add_option("--replace-signature", dest="replace_signature", action="store", help="Replace existing signature, file layout must be: username_signature-name_signatureid.html")
+    group.add_option("--replace-signature", dest="replace_signature", action="store", help="Replace existing signature, file layout must be: username_signature-name_signatureid.html or signature-name_signatureid.html ")
     group.add_option("--default-signature", dest="default_signature", action="store_true", help="Set signature as default one")
     parser.add_option_group(group)
 
@@ -317,16 +317,31 @@ Restore signature into the users store
 def restore_signature(user, filename, replace=None, default=None):
 
     restorefile = filename
+    filename_split = filename.split('_')
+    
+    if len(filename_split) == 2:
+        signaturename = filename_split[0].replace('-',' ')
+        if replace:
+            signatureid  = filename_split[1].split('.')[0]
+    elif len(filename_split) == 3:
+        signaturename = filename_split[1].replace('-',' ')
+        if replace:
+            signatureid = filename_split[2].split('.')[0]
+    else:
+        if replace:
+            print('File format is not supported')
+            sys.exit(1)
+
     with open(restorefile, 'r') as sigfile:
         signaturehtml = sigfile.read()
+
     if replace:
-        signatureid = filename.split('_')[2].split('.')[0]
         action = 'Replacing'
     else:
+        signaturename = filename.split('.')[0]
         signatureid = int(time.time())
         action = 'Adding'
 
-    signaturename = filename.split('_')[1].replace('-',' ')
     signaturecontent = dict(
         {u'name': signaturename, u'content': signaturehtml, u'isHTML': True})
     settings = read_settings(user)
