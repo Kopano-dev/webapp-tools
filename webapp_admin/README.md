@@ -25,6 +25,7 @@ If you want to make a change for all users pass the --all-users parameter. Examp
 - python-mapi
 - OpenSSL
 - dotty_dict
+- tabulate
 
 For debian 10 python3-pkg-resources is required
 
