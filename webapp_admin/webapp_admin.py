@@ -23,7 +23,10 @@ from time import mktime
 import getpass
 import time
 from optparse import OptionGroup
-from tabulate import tabulate
+try:
+    from tabulate import tabulate
+except ImportError:
+    pass
 try:
     from dotty_dict import dotty
 except ImportError:
@@ -261,6 +264,9 @@ def del_store(user, user_to_del, folder_type=None):
 List all added stores
 """
 def list_stores(user):
+    if not sys.modules.get('tabulate'):
+        print('tabulate not found on your system. \nRun pip3 install tabulate')
+        sys.exit(1)
     settings = read_settings(user) 
 
     try:
