@@ -54,6 +54,7 @@ Restore signatures for all users
 - python-mapi
 - OpenSSL
 - dotty_dict
+- tabulate
 
 For debian 10 python3-pkg-resources is required
 
