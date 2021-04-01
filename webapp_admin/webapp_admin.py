@@ -18,6 +18,7 @@ try:
     import OpenSSL.crypto
 except ImportError:
     pass
+import binascii
 from datetime import datetime, timedelta
 from time import mktime
 import getpass
@@ -86,7 +87,21 @@ def opt_args(print_help=None):
     group.add_option("--password", dest="password", action="store", help="set password")
     group.add_option("--ask-password", dest="ask_password", action="store_true", help="ask for password if needed")
     parser.add_option_group(group)
+    
+    # Sendas option group
+    group = OptionGroup(parser, "Sendas", "")
+    group.add_option("--list-from-address", dest="list_sendas", action="store_true", help="List sent from addresses")
+    group.add_option("--add-sent-from", dest="add_sendas", action="store_true", help="Create new sent from address")
+    group.add_option("--del-sent-from", dest="del_sendas", action="store", metavar="NUMBER", type="int", help="Delete sent from address")
+    group.add_option("--change-sent-from", dest="change_sendas", action="store", metavar="NUMBER", type="int", help="Change sent from address")
+    group.add_option("--sent-from-name", dest="sendas_name", action="store", help="Display name")
+    group.add_option("--sent-from-email,", dest="sendas_email", action="store", help="Email address")
+    group.add_option("--sent-from-alias", dest="sendas_alias", action="store_true", help="add all alias addresses of user to sent from list")
+    group.add_option("--sent-from-forward", dest="sendas_forward", action="store_true", help="Set as default forward address")
+    group.add_option("--sent-from-new", dest="sendas_new", action="store_true", help="Set as default new email address")
+    group.add_option("--sent-from-reply", dest="sendas_reply", action="store_true", help="Set as default reply address")
 
+    parser.add_option_group(group)
     # WebApp setting option group
     group = OptionGroup(parser, "webapp-settings", "")
     group.add_option("--language", dest="language", action="store", type="string", help="Set new language (e.g. en_GB or nl_NL)")
@@ -550,6 +565,175 @@ def remove_expired_smime(user):
                 print('deleting public certificate {} ({})'.format(cert.subject, cert.prop(PR_MESSAGE_DELIVERY_TIME).value))
                 user.store.root.associated.delete(cert)
     
+"""
+List sendas addresses
+
+:param user: The user
+"""
+def list_sendas(user):
+    if not sys.modules.get('tabulate'):
+        print('tabulate not found on your system. \nRun pip3 install tabulate')
+        sys.exit(1)
+    setting = read_settings(user)
+    sendas = (setting['settings']['zarafa']['v1']['contexts']['mail'].get('sendas', []))
+    table_header = ["ID", "Name", 'Email', 'Reply mail', 'New mail', 'Forward mail']
+    table_data =[]
+    check = u"\u2714"
+    uncheck = u"\u2716"
+    for l in sendas:
+        forward = uncheck
+        reply = uncheck
+        new = uncheck
+        if l['forward_mail']:
+            forward = check
+        if l['reply_mail']:
+            reply = check
+        if l['new_mail']:
+            new  = check    
+        table_data.append([l['rowid'], l['display_name'], l['smtp_address'],reply, new, forward])
+
+    print(tabulate(table_data, headers=table_header,tablefmt="grid"))
+    
+"""
+Add sendas address
+
+:param user: The user
+:param sendas_name: The name of the sendas address
+:param sendas_email: The email address of the sendas address
+:param sendas_forward: Set as default forward address 
+:param sendas_new: Set as default address for new email
+:param sendas_reply: Set as default reply address
+:param alias: Set all aliasses of user as sendas address
+
+"""
+def add_sendas(user, sendas_name, sendas_email, alias, sendas_forward=False, sendas_new=False, sendas_reply=False):
+    settings = read_settings(user)
+    sendas = settings['settings']['zarafa']['v1']['contexts']['mail'].get('sendas', [])
+    rowid = 0
+    if len(sendas) > 0:
+        rowid = sendas[-1].get('rowid', 0) + 1
+    if not alias:
+        if not sendas_name or not sendas_email:
+            print('--sendas-name and --sendas-email are mandatory')
+            sys.exit(1)
+        print('Creating sendas line for {}'.format(sendas_email) )
+        entryid =  binascii.hexlify(user.server.ab.CreateOneOff(sendas_name, "SMTP", sendas_email, MAPI_SEND_NO_RICH_INFO| MAPI_UNICODE)).decode()
+        sendas.append({
+            "address_type": "SMTP",
+            "display_name": sendas_name,
+            "display_type": 6, 
+            "display_type_ex": 0,
+            "email_address": "",
+            "entryid": entryid,
+            "forward_mail": sendas_forward,
+            "new_mail": sendas_new,
+            "object_type": 6,
+            "recipient_type": 0,
+            "reply_mail": sendas_reply,
+            "rowid": rowid,
+            "search_key": "",
+            "smtp_address": sendas_email
+        })
+    else:
+        print('Writing alias addresses to sendas list')
+        for address in user.prop(0x800f101f).value:
+            ## ignore the address that starts with SMTP as this is the main email address
+            if address.startswith("SMTP"):
+               continue
+            email = address.replace("smtp:","")
+            entryid =  binascii.hexlify(user.server.ab.CreateOneOff(email, "SMTP", email, MAPI_SEND_NO_RICH_INFO| MAPI_UNICODE)).decode()
+            sendas.append({
+                "address_type": "SMTP",
+                "display_name": email,
+                "display_type": 6, 
+                "display_type_ex": 0,
+                "email_address": "",
+                "entryid": entryid,
+                "forward_mail": False,
+                "new_mail": False,
+                "object_type": 6,
+                "recipient_type": 0,
+                "reply_mail": False,
+                "rowid": rowid,
+                "search_key": "",
+                "smtp_address": email
+            })
+            rowid += 1
+    
+    settings['settings']['zarafa']['v1']['contexts']['mail']['sendas'] = sendas
+    write_settings(user, json.dumps(settings))
+
+    if sys.modules.get('tabulate'):
+        list_sendas(user)
+"""
+Delete sendas address
+
+:param user: The user
+:param del_sendas: Number of row that needs to be deleted 
+
+"""
+def del_sendas(user, del_sendas):
+    settings = read_settings(user)
+    sendas = settings['settings']['zarafa']['v1']['contexts']['mail'].get('sendas', [])
+    delete = None
+    num  = 0
+    
+    for l in sendas:
+        if l['rowid'] == del_sendas:
+            delete = num
+            break
+        num += 1
+
+    if delete is not None:
+        sendas.pop(delete)
+        print('removing row {}'.format(del_sendas))
+
+    settings['settings']['zarafa']['v1']['contexts']['mail']['sendas'] = sendas
+    write_settings(user, json.dumps(settings))
+
+    if sys.modules.get('tabulate'):
+        list_sendas(user)
+
+"""
+Change sendas address
+
+:param user: The user
+:param change_sendas: Number of row that needs to be changed
+:param sendas_name: The name of the sendas address
+:param sendas_email: The email address of the sendas address
+:param sendas_forward: Set as default forward address 
+:param sendas_new: Set as default address for new email
+:param sendas_reply: Set as default reply address
+"""
+def change_sendas(user, change_sendas, sendas_name, sendas_email, sendas_forward, sendas_new, sendas_reply):
+    settings = read_settings(user)
+    sendas = settings['settings']['zarafa']['v1']['contexts']['mail'].get('sendas', [])
+    changed = None
+    for l in sendas:
+        if l['rowid'] == change_sendas:
+            if sendas_name:
+                changed = True
+                l['display_name'] = sendas_name
+            if sendas_email:
+                changed = True
+                l['smtp_address'] = sendas_email
+            if sendas_forward != l['forward_mail']:
+                changed = True
+                l['forward_mail'] = sendas_forward
+            if sendas_new != l['new_mail']:
+                changed = True
+                l['new_mail'] = sendas_new
+            if sendas_reply != l['reply_mail']:
+                changed = True
+                l['reply_mail'] = sendas_reply
+
+    if changed:
+        print('Writing new sendas settings')
+        settings['settings']['zarafa']['v1']['contexts']['mail']['sendas'] = sendas
+        write_settings(user, json.dumps(settings))
+
+    if sys.modules.get('tabulate'):
+        list_sendas(user)        
 
 """
 Custom function to merge two dictionaries.
@@ -743,6 +927,21 @@ def main():
             setting = 'settings.zarafa.v1.contexts.calendar.default_zoom_level = {}'.format(options.calendar_resolution)
             advanced_inject(user, setting)
             print('Calendar resolution changed to', '{}'.format(options.calendar_resolution), 'for {}'.format(user.name))
+
+        # Sendas
+        if options.list_sendas:
+            list_sendas(user)
+
+        if options.add_sendas:
+            add_sendas(user, options.sendas_name, options.sendas_email, options.sendas_alias,
+            options.sendas_forward, options.sendas_new, options.sendas_reply)
+
+        if options.del_sendas:
+            del_sendas(user, options.del_sendas)
+        
+        if options.change_sendas:
+            change_sendas(user, options.change_sendas,options.sendas_name, options.sendas_email, 
+            options.sendas_forward, options.sendas_new, options.sendas_reply)
 
         # Always at last!!!
         if options.reset:

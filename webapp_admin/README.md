@@ -55,6 +55,7 @@ Restore signatures for all users
 - OpenSSL
 - dotty_dict
 - tabulate
+- binascii
 
 For debian 10 python3-pkg-resources is required
 
