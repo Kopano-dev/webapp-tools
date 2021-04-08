@@ -89,6 +89,8 @@ def opt_args(print_help=None):
     parser.add_option_group(group)
     
     # Sendas option group
+    # Note: code wise we use 'sendas' similar to WebApp.
+    # The feature is called 'from addresses' and this is also what the user sees in WebApp settings.
     group = OptionGroup(parser, "Sendas", "")
     group.add_option("--list-from-address", dest="list_sendas", action="store_true", help="List sent from addresses")
     group.add_option("--add-sent-from", dest="add_sendas", action="store_true", help="Create new sent from address")
@@ -100,8 +102,8 @@ def opt_args(print_help=None):
     group.add_option("--sent-from-forward", dest="sendas_forward", action="store_true", help="Set as default forward address")
     group.add_option("--sent-from-new", dest="sendas_new", action="store_true", help="Set as default new email address")
     group.add_option("--sent-from-reply", dest="sendas_reply", action="store_true", help="Set as default reply address")
-
     parser.add_option_group(group)
+    
     # WebApp setting option group
     group = OptionGroup(parser, "webapp-settings", "")
     group.add_option("--language", dest="language", action="store", type="string", help="Set new language (e.g. en_GB or nl_NL)")
