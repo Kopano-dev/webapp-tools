@@ -53,7 +53,6 @@ Restore signatures for all users
 - python-kopano
 - python-mapi
 - OpenSSL
-- tabulate
 - binascii
 
 For debian 10 python3-pkg-resources is required
