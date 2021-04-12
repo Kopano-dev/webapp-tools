@@ -53,7 +53,6 @@ Restore signatures for all users
 - python-kopano
 - python-mapi
 - OpenSSL
-- dotty_dict
 - tabulate
 - binascii
 
