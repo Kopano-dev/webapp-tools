@@ -32,11 +32,6 @@ import time
 from functools import reduce
 from operator import getitem
 from optparse import OptionGroup
-try:
-    from tabulate import tabulate
-except ImportError:
-    pass
-
 
 """
 Read user settings
@@ -285,9 +280,6 @@ def del_store(user, user_to_del, folder_type=None):
 List all added stores
 """
 def list_stores(user):
-    if not sys.modules.get('tabulate'):
-        print('tabulate not found on your system. \nRun pip3 install tabulate')
-        sys.exit(1)
     settings = read_settings(user) 
 
     try:
@@ -301,7 +293,7 @@ def list_stores(user):
         for folder in stores[user]:
             table_data.append([user, folder, stores[user][folder]['show_subfolders']])
 
-    print(tabulate(table_data, headers=table_header,tablefmt="grid"))
+    print(get_pretty_table(table_data, table_header))
     
 """
 Backup signature from the users store
@@ -577,9 +569,6 @@ List sendas addresses
 :param user: The user
 """
 def list_sendas(user):
-    if not sys.modules.get('tabulate'):
-        print('tabulate not found on your system. \nRun pip3 install tabulate')
-        sys.exit(1)
     setting = read_settings(user)
     sendas = (setting['settings']['zarafa']['v1']['contexts']['mail'].get('sendas', []))
     table_header = ["ID", "Name", 'Email', 'Reply mail', 'New mail', 'Forward mail']
@@ -598,7 +587,7 @@ def list_sendas(user):
             new  = check    
         table_data.append([l['rowid'], l['display_name'], l['smtp_address'],reply, new, forward])
 
-    print(tabulate(table_data, headers=table_header,tablefmt="grid"))
+    print(get_pretty_table(table_data, table_header))
     
 """
 Add sendas address
@@ -669,8 +658,7 @@ def add_sendas(user, sendas_name, sendas_email, alias, sendas_forward=False, sen
     settings['settings']['zarafa']['v1']['contexts']['mail']['sendas'] = sendas
     write_settings(user, json.dumps(settings))
 
-    if sys.modules.get('tabulate'):
-        list_sendas(user)
+    list_sendas(user)
 """
 Delete sendas address
 
@@ -697,8 +685,7 @@ def del_sendas(user, del_sendas):
     settings['settings']['zarafa']['v1']['contexts']['mail']['sendas'] = sendas
     write_settings(user, json.dumps(settings))
 
-    if sys.modules.get('tabulate'):
-        list_sendas(user)
+    list_sendas(user)
 
 """
 Change sendas address
@@ -738,8 +725,7 @@ def change_sendas(user, change_sendas, sendas_name, sendas_email, sendas_forward
         settings['settings']['zarafa']['v1']['contexts']['mail']['sendas'] = sendas
         write_settings(user, json.dumps(settings))
 
-    if sys.modules.get('tabulate'):
-        list_sendas(user)        
+    list_sendas(user)        
 
 """
 Inject webapp settings into the users store
@@ -764,6 +750,22 @@ def advanced_inject(user, data, value_type='string'):
     reduce(getitem, keys[:-1], settings)[keys[-1]] = value
 
     write_settings(user, json.dumps(settings))
+
+def get_pretty_table(iterable, header):
+    max_len = [len(x) for x in header]
+    for row in iterable:
+        row = [row] if type(row) not in (list, tuple) else row
+        for index, col in enumerate(row):
+            if max_len[index] < len(str(col)):
+                max_len[index] = len(str(col))
+    output = '-' * (sum(max_len) + 1) + '\n'
+    output += '|' + ''.join([h + ' ' * (l - len(h)) + '|' for h, l in zip(header, max_len)]) + '\n'
+    output += '-' * (sum(max_len) + 1) + '\n'
+    for row in iterable:
+        row = [row] if type(row) not in (list, tuple) else row
+        output += '|' + ''.join([str(c) + ' ' * (l - len(str(c))) + '|' for c, l in zip(row, max_len)]) + '\n'
+    output += '-' * (sum(max_len) + 1) + '\n'
+    return output
 
 
 """
