@@ -8,7 +8,13 @@ except ImportError:
     print('python-kopano should be installed on your system')
     sys.exit(1)
 try:
-    from MAPI.Util import *
+    from MAPI.Tags import (
+        PR_EC_WEBACCESS_SETTINGS_JSON, PR_LANGUAGE, PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON_W, 
+        PR_MESSAGE_CLASS_W, PR_SENDER_NAME_W, PR_SUBJECT, PR_MESSAGE_CLASS, 
+        PR_MESSAGE_DELIVERY_TIME,PR_CLIENT_SUBMIT_TIME, PR_SENDER_NAME, 
+        PR_SENDER_EMAIL_ADDRESS, PR_SUBJECT_PREFIX, PR_RECEIVED_BY_NAME, PR_INTERNET_MESSAGE_ID, 
+        PR_BODY, PR_MESSAGE_DELIVERY_TIME
+        )
 except ImportError:
     print('python-mapi should be installed on your system')
     sys.exit(1)
@@ -23,13 +29,11 @@ from datetime import datetime, timedelta
 from time import mktime
 import getpass
 import time
+from functools import reduce
+from operator import getitem
 from optparse import OptionGroup
 try:
     from tabulate import tabulate
-except ImportError:
-    pass
-try:
-    from dotty_dict import dotty
 except ImportError:
     pass
 
@@ -758,6 +762,18 @@ def mergedicts(dict1, dict2):
         else:
             yield (k, dict2[k])
 
+def deep_update(source, overrides):
+    """
+    Update a nested dictionary or similar mapping.
+    Modify ``source`` in place.
+    """
+    for key, value in overrides.items():
+        if isinstance(value, collections.abc.Mapping) and value:
+            returned = deep_update(source.get(key, {}), value)
+            source[key] = returned
+        else:
+            source[key] = overrides[key]
+    return source
 
 """
 Inject webapp settings into the users store
@@ -766,9 +782,6 @@ Inject webapp settings into the users store
 :param data: The webapp setting
 """
 def advanced_inject(user, data, value_type='string'):
-    if not sys.modules.get('dotty_dict'):
-        print('dotty_dict not found on your system. \nRun pip3 install dotty_dict')
-        sys.exit(1)
     settings = read_settings(user)
     split_data = data.split('=')
 
@@ -779,14 +792,12 @@ def advanced_inject(user, data, value_type='string'):
         value = False
     if value_type == 'list':
         value = value.split(',')
+    
+    # Create new nested json if needed
+    keys =  split_data[0].strip().split('.')
+    reduce(getitem, keys[:-1], settings)[keys[-1]] = value
 
-    dot = dotty()
-    dot[split_data[0].rstrip()] = value
-
-    new_data = dot.to_dict()
-    new_settings = dict(mergedicts(settings, new_data))
-
-    write_settings(user, json.dumps(new_settings))
+    write_settings(user, json.dumps(settings))
 
 
 """
