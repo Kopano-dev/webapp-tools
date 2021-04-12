@@ -742,28 +742,6 @@ def change_sendas(user, change_sendas, sendas_name, sendas_email, sendas_forward
         list_sendas(user)        
 
 """
-Custom function to merge two dictionaries.
-Previously we used the internal dotty function for this,
-but this function caused undesired behavior
-
-:param dict1: The first dictionary
-:param dict2: The second dictionary
-"""
-
-def mergedicts(dict1, dict2):
-    for k in set(dict1.keys()).union(dict2.keys()):
-        if k in dict1 and k in dict2:
-            if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
-                yield (k, dict(mergedicts(dict1[k], dict2[k])))
-            else:
-                yield (k, dict2[k])
-        elif k in dict1:
-            yield (k, dict1[k])
-        else:
-            yield (k, dict2[k])
-
-
-"""
 Inject webapp settings into the users store
 
 :param user: The user
